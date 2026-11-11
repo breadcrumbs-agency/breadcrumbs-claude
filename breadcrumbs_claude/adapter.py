@@ -3,5 +3,11 @@ ports.load() imports this module by the name of its package (breadcrumbs_*); no 
 """
 from breadcrumbs import ports
 
+
+def _source(path):
+    from . import sessions
+    return sessions.sessions(path)
+
+
 if ports.layer("claude", __file__):
-    ports.harness("claude-code", "Claude Code", ("claude",), ports.mcp_add("claude"), order=20)
+    ports.harness("claude-code", "Claude Code", ("claude",), ports.mcp_add("claude"), order=20, source=_source)
