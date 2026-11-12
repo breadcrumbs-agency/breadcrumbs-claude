@@ -10,7 +10,7 @@ MIT licence. Part of breadcrumbs-agency.
 
 ## As a Claude Code plugin
 
-The `release` branch is the plugin: this part plus the files of breadcrumbs-common under `lib/` (built by `breadcrumbs/tools/bundle.py`), so it needs no PyPI package. It starts the breadcrumbs MCP server (tools `find`, `open`, `zoom`, `trail`, `stores`, `health`). Needs Python 3.11 or newer (`BREADCRUMBS_PY` names one).
+The `release` branch is the plugin: this part plus the files of breadcrumbs-common under `lib/` (built by `breadcrumbs/tools/bundle.py`), so it needs no PyPI package. It starts the breadcrumbs MCP server (tools `find`, `open`, `zoom`, `trail`, `stores`, `health`). The launcher is breadcrumbs-common's `launch-mcp.sh`, shared by every harness plugin. Needs Python 3.11 or newer (`BREADCRUMBS_PY` names one).
 
     /plugin marketplace add breadcrumbs-agency/breadcrumbs-claude#release
     /plugin install breadcrumbs@breadcrumbs-agency
