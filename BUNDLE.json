@@ -2,11 +2,11 @@
   "target": "claude",
   "sources": {
     "breadcrumbs-claude": {
-      "commit": "dd42a3992c99339e4963bf879d43d2196bce40cb",
+      "commit": "783a58406532c616e35a4850f4774e1ad858bd77",
       "clean": true
     },
     "breadcrumbs-common": {
-      "commit": "52211b2a5ceca9c220b5ebe51a314446f939211a",
+      "commit": "d2ecd4d0a214ce06ad17a139fb2630020e14c162",
       "clean": true
     }
   }
