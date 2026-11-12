@@ -1,0 +1,19 @@
+#!/bin/sh
+# Run `python -m breadcrumbs ARGS` for Claude Code, on a Python of 3.11 or newer: bc sync claude-code, bc viz, bc find ...
+# The base is ~/.claude/breadcrumbs (BREADCRUMBS_HOME names another): `sync` puts each session in the memory of the project
+# where it ran, under <base>/scopes, and every other command opens the memory of the project of the current folder
+# (BREADCRUMBS_HERE=1; BREADCRUMBS_SCOPE=off puts everything in the base). PYTHONPATH: lib/ holds the layers of
+# breadcrumbs-common and breadcrumbs-spacegraph (tools/bundle.py), this folder holds breadcrumbs_claude.
+# BREADCRUMBS_PY names the Python to use.
+here=$(cd "$(dirname "$0")/.." && pwd)
+export BREADCRUMBS_HOME="${BREADCRUMBS_HOME:-$HOME/.claude/breadcrumbs}"
+export BREADCRUMBS_HERE="${BREADCRUMBS_HERE:-1}"
+export PYTHONPATH="$here/lib:$here${PYTHONPATH:+:$PYTHONPATH}"
+for py in "$BREADCRUMBS_PY" python3.13 python3.12 python3.11 python3; do
+  [ -n "$py" ] || continue
+  if "$py" -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null; then
+    exec "$py" -W ignore -m breadcrumbs "$@"
+  fi
+done
+echo "breadcrumbs: needs Python 3.11 or newer (set BREADCRUMBS_PY)" >&2
+exit 1
