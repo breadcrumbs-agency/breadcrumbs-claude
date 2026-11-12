@@ -13,3 +13,6 @@ dependencies = ["breadcrumbs-common>=0.4.1,<0.5"]
 
 [tool.setuptools]
 packages = ["breadcrumbs_claude"]
+
+[tool.setuptools.package-data]
+breadcrumbs_claude = ["icon.png"]
