@@ -4,7 +4,8 @@ Claude Code keeps one JSON-lines file for each session: ~/.claude/projects/<proj
 files of its subagents sit deeper, in <session id>/subagents/, and are not read.) The record types that this reads:
 
     user       message.content is a text (a user turn), or a list of parts: "text" (a user turn) and "tool_result"
-               (a tool row; its content is a text or a list of text parts)
+               (a tool row; its content is a text or a list of parts: a "text" part is its text, a "tool_reference"
+               part is its tool_name, an "image" part is its media type in brackets, as [image/jpeg])
     assistant  message.content is a list of parts: "text" and "tool_use" (id, name, input). One message is written as
                one record for each part; the parts join into one row. The "thinking" parts are skipped.
     ai-title   aiTitle: the title of the session
@@ -24,6 +25,24 @@ from breadcrumbs import usage as usage_record
 from breadcrumbs.transcript import JsonLines, Rows, epoch, files, meta, text_parts
 
 ROOT = "~/.claude/projects"
+
+
+def result_text(content):
+    """The text of a tool result. A part without text is named, so that its call keeps a result row: a tool_reference
+    by its tool_name, an image by its media type (the bytes are not kept)."""
+    if not isinstance(content, list):
+        return text_parts(content)
+
+    def name(part):
+        if isinstance(part.get("text"), str):
+            return part["text"]
+        if part.get("type") == "tool_reference":
+            return part.get("tool_name")
+        if part.get("type") == "image":
+            source = part.get("source")
+            return "[%s]" % (source.get("media_type") if isinstance(source, dict) and source.get("media_type") else "image")
+
+    return "\n".join(t for t in map(name, (p for p in content if isinstance(p, dict))) if isinstance(t, str) and t)
 
 
 def session(path):
@@ -46,7 +65,7 @@ def session(path):
             elif part.get("type") == "tool_use":
                 rows.call(part.get("id"), part.get("name"), part.get("input"), ts)
             elif part.get("type") == "tool_result":
-                rows.result(part.get("tool_use_id"), text_parts(part.get("content")), ts)
+                rows.result(part.get("tool_use_id"), result_text(part.get("content")), ts)
     return os.path.basename(path)[:-len(".jsonl")], title, meta(skipped=lines.bad, **where), rows.rows
 
 
