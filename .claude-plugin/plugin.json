@@ -1,0 +1,9 @@
+{
+  "name": "breadcrumbs",
+  "version": "0.4.1",
+  "description": "Content-addressed memory for Claude Code: every line has an address; crumb_find and crumb open any memory from a one-line handle to its exact bytes.",
+  "author": { "name": "breadcrumbs-agency" },
+  "homepage": "https://github.com/breadcrumbs-agency/breadcrumbs-claude",
+  "license": "MIT",
+  "mcpServers": "./.mcp.json"
+}

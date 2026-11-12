@@ -1,0 +1,13 @@
+{
+  "target": "claude",
+  "sources": {
+    "breadcrumbs-claude": {
+      "commit": "dd42a3992c99339e4963bf879d43d2196bce40cb",
+      "clean": true
+    },
+    "breadcrumbs-common": {
+      "commit": "52211b2a5ceca9c220b5ebe51a314446f939211a",
+      "clean": true
+    }
+  }
+}

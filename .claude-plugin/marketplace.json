@@ -1,0 +1,13 @@
+{
+  "name": "breadcrumbs-agency",
+  "owner": {
+    "name": "breadcrumbs-agency"
+  },
+  "plugins": [
+    {
+      "name": "breadcrumbs",
+      "source": "./",
+      "description": "Content-addressed memory for Claude Code (MCP server: find, open, zoom, trail)."
+    }
+  ]
+}
