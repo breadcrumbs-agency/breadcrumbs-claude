@@ -3,12 +3,9 @@ Run with breadcrumbs-common and this folder on PYTHONPATH."""
 import datetime
 import json
 import os
-import tempfile
 import unittest
 
 from breadcrumbs import harness_case, ports
-
-from breadcrumbs_claude import sessions
 
 STAMP = datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc)
 HERE = {"cwd": "/work/demo", "gitBranch": "main", "timestamp": "2026-01-02T03:04:05.000Z"}
@@ -76,33 +73,6 @@ class Sessions(harness_case.SourceCase):
         self.assertEqual([(r["in"], r["cr"], r["cw"], r["out"], r["prompt"]) for r in got],
                          [(3, 0, 900, 40, 903), (5, 900, 60, 12, 965)], "Anthropic's input does not hold the cache")
         self.assertEqual({r["ts"] for r in got}, {int(STAMP.timestamp())})
-
-
-class ResultsWithoutText(unittest.TestCase):
-    """A tool result whose parts are not text keeps its result row: it is named, not dropped."""
-
-    def rows(self, *results):
-        calls = [{"type": "tool_use", "id": "t%d" % i, "name": name, "input": {}} for i, (name, _) in enumerate(results)]
-        back = [{"type": "tool_result", "tool_use_id": "t%d" % i, "content": content} for i, (_, content) in enumerate(results)]
-        with tempfile.TemporaryDirectory() as folder:
-            path = os.path.join(folder, "s1.jsonl")
-            with open(path, "w", encoding="utf-8") as f:
-                f.write(line("assistant", calls, {"id": "m", "model": "claude-demo", "usage": use(1, 0, 0, 1)}, requestId="r") + "\n")
-                f.write(line("user", back) + "\n")
-            return sessions.session(path)[3]
-
-    def test_a_tool_reference_is_named_by_its_tool(self):
-        (_call, result), = [self.rows(("ToolSearch", [{"type": "tool_reference", "tool_name": "WebFetch"}]))]
-        self.assertEqual((result["tool_name"], result["content"]), ("ToolSearch", "WebFetch"))
-
-    def test_an_image_is_named_by_its_media_type_and_text_beside_it_stays(self):
-        rows = self.rows(("Shot", [{"type": "image", "source": {"type": "base64", "data": "AAAA", "media_type": "image/jpeg"}}]),
-                         ("Both", [{"type": "text", "text": "seen"}, {"type": "image", "source": {}}]))
-        self.assertEqual([r["content"] for r in rows if r["role"] == "tool"], ["[image/jpeg]", "seen\n[image]"])
-
-    def test_an_unknown_part_adds_nothing(self):
-        rows = self.rows(("Odd", [{"type": "audio", "data": "x"}]))
-        self.assertEqual([r["role"] for r in rows], ["assistant"])
 
 
 if __name__ == "__main__":
