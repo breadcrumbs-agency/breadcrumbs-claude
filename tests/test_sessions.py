@@ -5,14 +5,23 @@ import json
 import os
 import unittest
 
-from breadcrumbs import harness_case
+from breadcrumbs import harness_case, ports
 
 STAMP = datetime.datetime(2026, 1, 2, 3, 4, 5, tzinfo=datetime.timezone.utc)
 HERE = {"cwd": "/work/demo", "gitBranch": "main", "timestamp": "2026-01-02T03:04:05.000Z"}
 
 
-def line(kind, content, **more):
-    return json.dumps(dict({"type": kind, "message": {"role": kind, "content": content}}, **HERE, **more))
+def line(kind, content, message=None, **more):
+    return json.dumps(dict({"type": kind, "message": dict({"role": kind, "content": content}, **(message or {}))}, **HERE,
+                           **more))
+
+
+def use(inp, cr, cw, out):  # made-up counts of the Anthropic API
+    return {"input_tokens": inp, "cache_read_input_tokens": cr, "cache_creation_input_tokens": cw, "output_tokens": out}
+
+
+R1 = {"id": "msg_1", "model": "claude-demo", "usage": use(3, 0, 900, 40)}  # one response, written as three records
+R2 = {"id": "msg_2", "model": "claude-demo", "usage": use(5, 900, 60, 12)}
 
 
 class Sessions(harness_case.SourceCase):
@@ -26,13 +35,15 @@ class Sessions(harness_case.SourceCase):
                 json.dumps({"type": "ai-title", "aiTitle": "Boil an egg", "sessionId": "s1"}),
                 line("user", "a caveat that Claude Code wrote", isMeta=True),
                 line("user", "how long to boil an egg?"),
-                line("assistant", [{"type": "thinking", "thinking": "hmm", "signature": "x"}]),
-                line("assistant", [{"type": "text", "text": "Let me look at the clock."}]),
-                line("assistant", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "date"}}]),
+                line("assistant", [{"type": "thinking", "thinking": "hmm", "signature": "x"}], R1, requestId="req_1"),
+                line("assistant", [{"type": "text", "text": "Let me look at the clock."}], R1, requestId="req_1"),
+                line("assistant", [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {"command": "date"}}], R1,
+                     requestId="req_1"),
                 line("user", [{"type": "tool_result", "tool_use_id": "t1", "content": [{"type": "text", "text": "Fri 03:04"}]}]),
                 json.dumps({"type": "attachment", "attachment": {"type": "hook_success"}}),
                 "{this line is broken",
-                line("assistant", [{"type": "text", "text": "About ten minutes."}]),
+                line("assistant", [{"type": "text", "text": "About ten minutes."}], R2, requestId="req_2"),
+                line("assistant", [], {"id": "msg_3", "model": "<synthetic>", "usage": use(0, 0, 0, 0)}, requestId="req_3"),
             ]) + "\n")
         return os.path.join(folder, "projects")
 
@@ -53,6 +64,15 @@ class Sessions(harness_case.SourceCase):
     def test_a_broken_line_is_skipped_and_counted(self):
         (_sid, _title, meta, rows), = self.sessions()
         self.assertEqual((meta["skipped"], len(rows)), ("1", 4))
+
+    def test_a_response_split_in_records_is_one_request(self):
+        got = list(ports.harnesses()[self.KEY]["usage"](self.path))
+        self.assertEqual([(r["req"], r["sess"], r["model"], r["prov"], r["src"]) for r in got],
+                         [("req_1", "s1", "claude-demo", "anthropic", "claude-code"),
+                          ("req_2", "s1", "claude-demo", "anthropic", "claude-code")], "once each; no synthetic record")
+        self.assertEqual([(r["in"], r["cr"], r["cw"], r["out"], r["prompt"]) for r in got],
+                         [(3, 0, 900, 40, 903), (5, 900, 60, 12, 965)], "Anthropic's input does not hold the cache")
+        self.assertEqual({r["ts"] for r in got}, {int(STAMP.timestamp())})
 
 
 if __name__ == "__main__":

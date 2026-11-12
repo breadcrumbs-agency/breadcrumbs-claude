@@ -11,9 +11,16 @@ files of its subagents sit deeper, in <session id>/subagents/, and are not read.
 
 Every other record type (attachments, api requests, file history, modes, system) is skipped, and so is a record whose
 isMeta is true. The session meta keeps cwd and branch (gitBranch) of the first record that has them.
+
+The usage of a model request (usage()): an assistant record has message.usage, with the counts of the Anthropic API:
+input_tokens (the input that no cache held: it does NOT count the cached tokens), cache_read_input_tokens,
+cache_creation_input_tokens (the cache write), output_tokens. One response is written as several records (one for each
+part), each with the same message id, requestId and usage: it is counted once, by its requestId (else its message id).
+A record of the model "<synthetic>" (a message that Claude Code made itself, with no request) is skipped.
 """
 import os
 
+from breadcrumbs import usage as usage_record
 from breadcrumbs.transcript import JsonLines, Rows, epoch, files, meta, text_parts
 
 ROOT = "~/.claude/projects"
@@ -48,3 +55,24 @@ def sessions(path=None):
     ~/.claude/projects (the default), each (id, title, meta, rows)."""
     for found in files(path, ROOT, "*.jsonl", "*/*.jsonl"):
         yield session(found)
+
+
+def requests(path):
+    """The usage records of one session file, one for each request (breadcrumbs/usage.py record())."""
+    sid, seen = os.path.basename(path)[:-len(".jsonl")], set()
+    for record in JsonLines(path):
+        message = record.get("message")
+        use = message.get("usage") if record.get("type") == "assistant" and isinstance(message, dict) else None
+        req = record.get("requestId") or message.get("id") if isinstance(use, dict) else None
+        if not req or req in seen or message.get("model") == "<synthetic>":
+            continue
+        seen.add(req)
+        yield usage_record.record("claude-code", sid, req, epoch(record.get("timestamp")), message.get("model"), "anthropic",
+                                  use.get("input_tokens"), use.get("cache_read_input_tokens"),
+                                  use.get("cache_creation_input_tokens"), use.get("output_tokens"), 0)
+
+
+def usage(path=None):
+    """The usage of the harness claude-code: the usage records of the files that sessions(path) reads."""
+    for found in files(path, ROOT, "*.jsonl", "*/*.jsonl"):
+        yield from requests(found)
