@@ -2,11 +2,15 @@
   "target": "claude",
   "sources": {
     "breadcrumbs-claude": {
-      "commit": "783a58406532c616e35a4850f4774e1ad858bd77",
+      "commit": "c1b6a53e86fa62b046fa2c8fa1121655e25faee3",
       "clean": true
     },
     "breadcrumbs-common": {
-      "commit": "d2ecd4d0a214ce06ad17a139fb2630020e14c162",
+      "commit": "8cec3397d073b9087c54e57f1a0c89fbf895490b",
+      "clean": true
+    },
+    "breadcrumbs-spacegraph": {
+      "commit": "2ba6e25bd1359595a24c7987805824ac06e6d153",
       "clean": true
     }
   }

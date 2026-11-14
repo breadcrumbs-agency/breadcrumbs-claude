@@ -1,0 +1,9 @@
+#!/bin/sh
+# Start the breadcrumbs MCP server (stdio) for Claude Code: the launcher of breadcrumbs-common (it picks a Python of 3.11 or
+# newer; BREADCRUMBS_PY names one), with the base ~/.claude/breadcrumbs (BREADCRUMBS_HOME names another) and BREADCRUMBS_HERE=1:
+# a call that names no store looks only in the memory of the project of the folder where Claude Code runs (sync.py).
+# PYTHONPATH comes from .mcp.json. The defaults are here, not in .mcp.json: Claude Code does not expand a ${VAR:-${OTHER}}.
+here=$(cd "$(dirname "$0")/.." && pwd)
+export BREADCRUMBS_HOME="${BREADCRUMBS_HOME:-$HOME/.claude/breadcrumbs}"
+export BREADCRUMBS_HERE="${BREADCRUMBS_HERE:-1}"
+exec sh "$here/lib/breadcrumbs/launch-mcp.sh"

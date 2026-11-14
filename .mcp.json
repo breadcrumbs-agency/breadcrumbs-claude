@@ -2,7 +2,7 @@
   "mcpServers": {
     "breadcrumbs": {
       "command": "sh",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/lib/breadcrumbs/launch-mcp.sh"],
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/bc-mcp"],
       "env": { "PYTHONPATH": "${CLAUDE_PLUGIN_ROOT}/lib:${CLAUDE_PLUGIN_ROOT}" }
     }
   }

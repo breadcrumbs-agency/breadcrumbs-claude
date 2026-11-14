@@ -9,7 +9,8 @@ Three thin servers carry the same verb table, and none of them has logic of its 
     sock.py  one JSON line each way over a Unix socket or loopback TCP (the framing of hive.py)
     a2a.py   A2A over HTTP on loopback (agent card and message/send)
 
-Stores: "default" is ~/.hermes/breadcrumbs, each profile is "<name>" (~/.hermes/profiles/<name>/breadcrumbs), and
+Stores: "default" is ~/.hermes/breadcrumbs, each scope (a git repository or a folder with .breadcrumbs, scope.py) is its id
+(~/.hermes/breadcrumbs/scopes/<id>), each profile is "<name>" (~/.hermes/profiles/<name>/breadcrumbs), and
 "local" is --home or $BREADCRUMBS_HOME when it is neither. A verb takes `store`: a name, or "*" for all. With no
 store, find, open and zoom look in all of them (a crumb id is a content hash, so the same id names the same text in
 every store), and trail takes "local" when it is there, else "default". Each Reader stays open (resident) and is
@@ -26,7 +27,7 @@ import sys
 import threading
 import time
 
-from . import ports
+from . import ports, scope
 from .reader import Reader
 
 VERSION = "0.1.0"
@@ -67,23 +68,39 @@ def server_command(kind="mcp", env=None):
 
 
 # -- the stores --------------------------------------------------------------------------------------------
+def _base_of(local):
+    """The base that holds the scope store `local` (<base>/scopes/<id>), or None."""
+    parent = os.path.dirname(local) if local else ""
+    return os.path.dirname(parent) if os.path.basename(parent) == "scopes" else None
+
+
 class Stores:
     """Which stores exist. Names are read at each call: a profile made later shows up."""
 
-    def __init__(self, local=None, root=None):
+    def __init__(self, local=None, root=None, here=False):
         self.root = os.path.abspath(os.path.expanduser(root or "~/.hermes"))
         self.local = os.path.abspath(os.path.expanduser(local)) if local else None
+        self.here = here  # a call that names no store looks in "local" only: the memory of the scope of the folder (sync.py)
 
     @property
     def base(self):
         return os.path.join(self.root, "breadcrumbs")
 
     def names(self):
-        """{name: folder}, in the order that the verbs look: local, default, then the profiles."""
+        """{name: folder}, in the order that the verbs look: local, default, the scopes, then the profiles."""
         out = {}
         if self.local and os.path.realpath(self.local) != os.path.realpath(self.base):
             out["local"] = self.local
         out["default"] = self.base
+        for sc in scope.known(self.base):  # the scopes (a git repository, a folder with .breadcrumbs): name = its id
+            if sc["id"] not in out and sc["present"]:
+                out[sc["id"]] = sc["path"]
+        other = _base_of(self.local)  # local is a scope of another base (a harness that keeps its own): its memories
+        if other and os.path.realpath(other) != os.path.realpath(self.base):
+            out.setdefault("base", other)
+            for sc in scope.known(other):
+                if sc["id"] not in out and sc["present"] and os.path.realpath(sc["path"]) != os.path.realpath(self.local):
+                    out[sc["id"]] = sc["path"]
         profiles = os.path.join(self.root, "profiles")
         try:
             for name in sorted(os.listdir(profiles)):
@@ -189,6 +206,8 @@ class Core:
         want = params.get("store")
         present = list(self.stores.present())
         if want is None:
+            if self.stores.here and self.stores.local:  # no store named: this folder's memory, and no other one
+                return ["local"] if "local" in present else []
             return present if everywhere else present[:1]
         if want == "*":
             return present
@@ -255,7 +274,8 @@ class Core:
 
     def do_stores(self):
         present = self.stores.present()
-        return {"stores": [{"name": n, "home": h, "present": n in present} for n, h in self.stores.names().items()]}
+        return {"stores": [{"name": n, "home": h, "present": n in present} for n, h in self.stores.names().items()],
+                "default": self.pick({})}  # where a call with no `store` looks
 
     def do_health(self):
         with self._lock:
