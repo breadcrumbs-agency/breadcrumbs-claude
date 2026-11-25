@@ -74,5 +74,5 @@ if ports.layer("claude", __file__):
     ports.harness("claude-code", "Claude Code", ("claude",), ports.mcp_add("claude"), order=20, source=_source,
                   usage=_usage, icon=ports.image(__file__, "icon.png"),
                   repository="https://github.com/breadcrumbs-agency/breadcrumbs-claude",
-                  pages="https://breadcrumbs-agency.github.io/hermes-breadcrumb-plugin/")
+                  pages="https://breadcrumbs-agency.github.io/breadcrumbs-hermes/")
     ports.command("scopes", _add_scopes, _scopes, after="vault")
